@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Followspot Cue Sheet</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- jsPDF for offline PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1>🔦 Followspot</h1>
+                <input type="text" id="productionName" placeholder="Production Name" class="production-input">
+                <input type="text" id="lightingDesigner" placeholder="Lighting Designer" class="production-input">
+            </div>
+            <div class="header-right">
+                <div class="save-status" id="saveStatus">Ready</div>
+                <label class="auto-save-toggle">
+                    <input type="checkbox" id="autoSaveToggle">
+                    Auto-Save
+                </label>
+                <div class="version-info" id="versionInfo" title="App Version">v1.0.0</div>
+            </div>
+        </header>
+
+        <!-- Toolbar -->
+        <nav class="toolbar">
+            <div class="toolbar-left">
+                <button id="btnNewFile" class="btn btn-secondary" title="New File (Ctrl+Shift+N)">
+                    📄 New File
+                </button>
+                <button id="btnSave" class="btn btn-primary" title="Save to File (Ctrl+S)">
+                    💾 Save to File
+                </button>
+                <button id="btnLoad" class="btn btn-secondary" title="Load from File">
+                    📂 Load from File
+                </button>
+                <input type="file" id="fileInput" accept=".json" style="display: none;">
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" id="btnExportPDF">
+                        📄 Export PDF ▼
+                    </button>
+                    <div class="dropdown-menu" id="pdfDropdown">
+                        <button data-export="master">Master Cue Sheet</button>
+                        <button data-export="spot1">Spot 1 Cue Sheet</button>
+                        <button data-export="spot2">Spot 2 Cue Sheet</button>
+                        <button data-export="spot3">Spot 3 Cue Sheet</button>
+                        <button data-export="spot4">Spot 4 Cue Sheet</button>
+                    </div>
+                </div>
+                <button id="btnSettings" class="btn btn-icon" title="Settings">
+                    ⚙️
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search cues...">
+                    <select id="searchFilter">
+                        <option value="all">All Fields</option>
+                        <option value="cueNumber">Cue #</option>
+                        <option value="character">Character</option>
+                        <option value="page">Page/Bar</option>
+                        <option value="trigger">Go Trigger</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="master">Master Sheet</button>
+            <button class="tab-btn" data-tab="spot1">Spot 1</button>
+            <button class="tab-btn" data-tab="spot2">Spot 2</button>
+            <button class="tab-btn" data-tab="spot3">Spot 3</button>
+            <button class="tab-btn" data-tab="spot4">Spot 4</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="content">
+            <!-- Master View -->
+            <div class="tab-content active" id="tab-master">
+                <div class="table-actions">
+                <button id="btnAddCue" class="btn btn-success">+ Add Cue</button>
+                <button id="btnDouseSelected" class="btn btn-warning" disabled>🔥 Douse Selected</button>
+                <button id="btnDuplicateSelected" class="btn btn-secondary" disabled>📋 Duplicate Selected</button>
+                <button id="btnDeleteSelected" class="btn btn-danger" disabled>🗑️ Delete Selected</button>
+                <span class="cue-count" id="cueCount">0 cues</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="cue-table" id="masterTable">
+                        <thead>
+                            <tr>
+                                <th class="col-select"><input type="checkbox" id="selectAll"></th>
+                                <th class="col-cue sortable" data-sort="cueNumber">Cue #</th>
+                                <th class="col-page sortable" data-sort="page">Page/Bar</th>
+                                <th class="col-trigger">Go Trigger</th>
+                                <th class="col-character sortable" data-sort="character">Character</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-spot">Spot 1</th>
+                                <th class="col-spot">Spot 2</th>
+                                <th class="col-spot">Spot 3</th>
+                                <th class="col-spot">Spot 4</th>
+                                <th class="col-size">Size</th>
+                                <th class="col-color">Color</th>
+                                <th class="col-intensity">Int %</th>
+                                <th class="col-notes">Notes</th>
+                                <th class="col-fx">FX</th>
+                                <th class="col-timer">Timer</th>
+                                <th class="col-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="masterTableBody">
+                            <!-- Cue rows populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Spot 1 View -->
+            <div class="tab-content" id="tab-spot1">
+                <div class="operator-header">
+                    <h2>Spot 1 Operator View</h2>
+                    <span class="operator-cue-count" id="spot1Count">0 cues</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="cue-table operator-table" id="spot1Table">
+                        <thead>
+                            <tr>
+                                <th class="col-cue">Cue #</th>
+                                <th class="col-trigger">Go Trigger</th>
+                                <th class="col-character">Character</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-action">Action</th>
+                                <th class="col-size">Size</th>
+                                <th class="col-color">Color</th>
+                                <th class="col-intensity">Int %</th>
+                                <th class="col-notes">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spot1TableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Spot 2 View -->
+            <div class="tab-content" id="tab-spot2">
+                <div class="operator-header">
+                    <h2>Spot 2 Operator View</h2>
+                    <span class="operator-cue-count" id="spot2Count">0 cues</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="cue-table operator-table" id="spot2Table">
+                        <thead>
+                            <tr>
+                                <th class="col-cue">Cue #</th>
+                                <th class="col-trigger">Go Trigger</th>
+                                <th class="col-character">Character</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-action">Action</th>
+                                <th class="col-size">Size</th>
+                                <th class="col-color">Color</th>
+                                <th class="col-intensity">Int %</th>
+                                <th class="col-notes">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spot2TableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Spot 3 View -->
+            <div class="tab-content" id="tab-spot3">
+                <div class="operator-header">
+                    <h2>Spot 3 Operator View</h2>
+                    <span class="operator-cue-count" id="spot3Count">0 cues</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="cue-table operator-table" id="spot3Table">
+                        <thead>
+                            <tr>
+                                <th class="col-cue">Cue #</th>
+                                <th class="col-trigger">Go Trigger</th>
+                                <th class="col-character">Character</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-action">Action</th>
+                                <th class="col-size">Size</th>
+                                <th class="col-color">Color</th>
+                                <th class="col-intensity">Int %</th>
+                                <th class="col-notes">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spot3TableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Spot 4 View -->
+            <div class="tab-content" id="tab-spot4">
+                <div class="operator-header">
+                    <h2>Spot 4 Operator View</h2>
+                    <span class="operator-cue-count" id="spot4Count">0 cues</span>
+                </div>
+                <div class="table-wrapper">
+                    <table class="cue-table operator-table" id="spot4Table">
+                        <thead>
+                            <tr>
+                                <th class="col-cue">Cue #</th>
+                                <th class="col-trigger">Go Trigger</th>
+                                <th class="col-character">Character</th>
+                                <th class="col-location">Location</th>
+                                <th class="col-action">Action</th>
+                                <th class="col-size">Size</th>
+                                <th class="col-color">Color</th>
+                                <th class="col-intensity">Int %</th>
+                                <th class="col-notes">Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spot4TableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button class="modal-close" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Characters / Targets</h3>
+                        <p class="settings-desc">Add characters that appear in your production. These populate the Character dropdown.</p>
+                        <div class="character-list" id="characterList">
+                            <!-- Populated by JS -->
+                        </div>
+                        <div class="add-character">
+                            <input type="text" id="newCharacterInput" placeholder="New character name...">
+                            <button id="btnAddCharacter" class="btn btn-success">+ Add</button>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Custom Stage Locations</h3>
+                        <p class="settings-desc">Standard locations are included. Add custom locations below.</p>
+                        <div class="location-list" id="locationList">
+                            <!-- Populated by JS -->
+                        </div>
+                        <div class="add-location">
+                            <input type="text" id="newLocationInput" placeholder="New location (e.g., PLAT1)...">
+                            <button id="btnAddLocation" class="btn btn-success">+ Add</button>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Auto-Save Interval</h3>
+                        <select id="autoSaveInterval">
+                            <option value="60000">Every 1 minute</option>
+                            <option value="120000" selected>Every 2 minutes</option>
+                            <option value="300000">Every 5 minutes</option>
+                            <option value="600000">Every 10 minutes</option>
+                        </select>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Data Management</h3>
+                        <button id="btnClearAll" class="btn btn-danger">🗑️ Clear All Data</button>
+                        <button id="btnLoadSample" class="btn btn-secondary">📋 Load Sample Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cue Edit Modal -->
+        <div class="modal" id="cueModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-wide">
+                <div class="modal-header">
+                    <h2 id="cueModalTitle">Add New Cue</h2>
+                    <button class="modal-close" id="closeCueModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="cueForm">
+                        <input type="hidden" id="cueId">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="cueNumber">Cue #</label>
+                                <input type="text" id="cueNumber" required placeholder="1, 1.5, 2A...">
+                            </div>
+                            <div class="form-group">
+                                <label for="cuePage">Page/Bar/Measure</label>
+                                <input type="text" id="cuePage" placeholder="p.12, m.45...">
+                            </div>
+                            <div class="form-group form-group-wide">
+                                <label for="cueTrigger">Go Trigger</label>
+                                <input type="text" id="cueTrigger" placeholder="LX 42 GO, on lyric 'rise again'...">
+                            </div>
+                            <div class="form-group">
+                                <label for="cueCharacter">Character/Target</label>
+                                <select id="cueCharacter">
+                                    <option value="">-- Select --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueLocation">Stage Location</label>
+                                <select id="cueLocation">
+                                    <option value="">-- Select --</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <h3 class="form-section-title">Spot Operator Actions</h3>
+                        <div class="form-grid form-grid-4">
+                            <div class="form-group">
+                                <label for="cueSpot1">Spot 1 Action</label>
+                                <select id="cueSpot1">
+                                    <option value="">--</option>
+                                    <option value="Pickup">Pickup</option>
+                                    <option value="Hold">Hold</option>
+                                    <option value="Follow">Follow</option>
+                                    <option value="Fade Up">Fade Up</option>
+                                    <option value="Fade Out">Fade Out</option>
+                                    <option value="Bump">Bump</option>
+                                    <option value="Snap">Snap</option>
+                                    <option value="Out">Out</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueSpot2">Spot 2 Action</label>
+                                <select id="cueSpot2">
+                                    <option value="">--</option>
+                                    <option value="Pickup">Pickup</option>
+                                    <option value="Hold">Hold</option>
+                                    <option value="Follow">Follow</option>
+                                    <option value="Fade Up">Fade Up</option>
+                                    <option value="Fade Out">Fade Out</option>
+                                    <option value="Bump">Bump</option>
+                                    <option value="Snap">Snap</option>
+                                    <option value="Out">Out</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueSpot3">Spot 3 Action</label>
+                                <select id="cueSpot3">
+                                    <option value="">--</option>
+                                    <option value="Pickup">Pickup</option>
+                                    <option value="Hold">Hold</option>
+                                    <option value="Follow">Follow</option>
+                                    <option value="Fade Up">Fade Up</option>
+                                    <option value="Fade Out">Fade Out</option>
+                                    <option value="Bump">Bump</option>
+                                    <option value="Snap">Snap</option>
+                                    <option value="Out">Out</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueSpot4">Spot 4 Action</label>
+                                <select id="cueSpot4">
+                                    <option value="">--</option>
+                                    <option value="Pickup">Pickup</option>
+                                    <option value="Hold">Hold</option>
+                                    <option value="Follow">Follow</option>
+                                    <option value="Fade Up">Fade Up</option>
+                                    <option value="Fade Out">Fade Out</option>
+                                    <option value="Bump">Bump</option>
+                                    <option value="Snap">Snap</option>
+                                    <option value="Out">Out</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h3 class="form-section-title">Beam Settings</h3>
+                        <div class="form-grid form-grid-3">
+                            <div class="form-group">
+                                <label for="cueSize">Size</label>
+                                <select id="cueSize">
+                                    <option value="">--</option>
+                                    <option value="Full Body">Full Body</option>
+                                    <option value="Mid">Mid</option>
+                                    <option value="Headshot">Headshot</option>
+                                    <option value="Tight">Tight</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueColor">Color/Gel</label>
+                                <input type="text" id="cueColor" placeholder="L201, R60...">
+                            </div>
+                            <div class="form-group">
+                                <label for="cueIntensity">Intensity %</label>
+                                <input type="number" id="cueIntensity" min="0" max="100" placeholder="100">
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group form-group-wide">
+                                <label for="cueNotes">Notes</label>
+                                <textarea id="cueNotes" rows="2" placeholder="Additional instructions..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="cueFX">Special FX</label>
+                                <input type="text" id="cueFX" placeholder="Strobe, Color scroll...">
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="btnCancelCue">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Cue</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
